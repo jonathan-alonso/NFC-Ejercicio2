@@ -9,23 +9,22 @@
     maximum-scale=1, user-scalable=no, viewport-fit=cover"
   >
 
-  <meta name="theme-color" content="#050505">
+  <meta name="theme-color" content="#000000">
 
-  <title>Demostración de exposición NFC</title>
+  <title>Evaluación de seguridad NFC</title>
 
   <style>
     :root {
-      --background: #030303;
-      --panel: #0b0d0c;
-      --panel-light: #111512;
-      --border: #263229;
-      --red: #ff3b30;
-      --red-dark: #6b0909;
+      --black: #000000;
+      --panel: rgba(3, 12, 7, 0.94);
+      --green: #31ff6a;
+      --green-soft: #8effaa;
+      --red: #ff3434;
       --yellow: #ffd60a;
-      --green: #32d74b;
-      --blue: #64d2ff;
-      --white: #f5f5f7;
-      --muted: #a0a7a2;
+      --blue: #61d5ff;
+      --white: #f5fff7;
+      --muted: #97a99c;
+      --border: #164824;
     }
 
     * {
@@ -35,8 +34,9 @@
     html,
     body {
       margin: 0;
+      width: 100%;
       min-height: 100%;
-      background: var(--background);
+      background: #000;
       color: var(--white);
       font-family:
         -apple-system,
@@ -49,508 +49,645 @@
     body {
       min-height: 100vh;
       min-height: 100dvh;
-
-      padding:
-        max(18px, env(safe-area-inset-top))
-        15px
-        max(30px, env(safe-area-inset-bottom));
+      overflow-x: hidden;
     }
 
-    .container {
+    button {
+      font: inherit;
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* Fondo Matrix */
+
+    #matrix-canvas {
+      position: fixed;
+      inset: 0;
       width: 100%;
-      max-width: 760px;
-      margin: 0 auto;
+      height: 100%;
+      z-index: 0;
+      background: #000;
     }
 
-    /* Encabezado de impacto */
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      padding: 25px 19px;
-      border: 1px solid #6d2020;
-      border-radius: 20px;
+    .matrix-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
       background:
         radial-gradient(
-          circle at top right,
-          rgba(255, 59, 48, 0.23),
-          transparent 43%
-        ),
-        linear-gradient(
-          160deg,
-          #180707 0%,
-          #090909 58%
-        );
-
-      box-shadow:
-        0 0 35px rgba(255, 59, 48, 0.13),
-        inset 0 0 30px rgba(255, 59, 48, 0.04);
-    }
-
-    .hero::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-
-      background:
-        repeating-linear-gradient(
-          0deg,
-          rgba(255, 255, 255, 0.015),
-          rgba(255, 255, 255, 0.015) 1px,
-          transparent 1px,
-          transparent 4px
+          circle at center,
+          rgba(0, 0, 0, 0.08),
+          rgba(0, 0, 0, 0.82) 75%
         );
     }
 
-    .alert-badge {
+    /* Pantalla inicial */
+
+    #warning-screen {
       position: relative;
-      display: inline-flex;
+      z-index: 2;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      padding:
+        max(24px, env(safe-area-inset-top))
+        20px
+        max(30px, env(safe-area-inset-bottom));
+      text-align: center;
+    }
 
-      padding: 7px 11px;
-      border: 1px solid var(--red);
-      border-radius: 999px;
+    .warning-panel {
+      width: 100%;
+      max-width: 680px;
+      padding: 28px 20px;
+      border: 2px solid var(--red);
+      border-radius: 20px;
+      background: rgba(24, 0, 0, 0.82);
+      box-shadow:
+        0 0 25px rgba(255, 0, 0, 0.65),
+        inset 0 0 30px rgba(255, 0, 0, 0.15);
+      backdrop-filter: blur(7px);
+      animation: alertPulse 0.7s infinite alternate;
+    }
 
+    .warning-symbol {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 94px;
+      height: 94px;
+      margin: 0 auto 20px;
+      border: 6px solid var(--red);
+      border-radius: 50%;
       color: var(--red);
+      font-size: 62px;
+      font-weight: 1000;
+      box-shadow:
+        0 0 18px var(--red),
+        0 0 42px rgba(255, 0, 0, 0.7);
+    }
+
+    .warning-title {
+      margin: 0;
+      color: var(--red);
+      font-size: clamp(35px, 10vw, 62px);
+      line-height: 0.95;
+      font-weight: 1000;
+      letter-spacing: -1px;
+      text-shadow:
+        0 0 12px rgba(255, 52, 52, 0.9),
+        0 0 32px rgba(255, 0, 0, 0.75);
+    }
+
+    .warning-subtitle {
+      margin: 24px auto 0;
+      max-width: 560px;
+      font-size: clamp(18px, 4.8vw, 25px);
+      line-height: 1.4;
+      font-weight: 700;
+    }
+
+    .warning-status {
+      margin-top: 20px;
+      color: var(--yellow);
       font-family: monospace;
-      font-size: 12px;
+      font-size: 15px;
       font-weight: 900;
       letter-spacing: 1px;
     }
 
-    .alert-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--red);
-      box-shadow: 0 0 12px var(--red);
-      animation: pulse 0.8s infinite alternate;
-    }
-
-    .hero h1 {
-      position: relative;
-      margin: 19px 0 12px;
-
-      color: var(--red);
-      font-size: clamp(34px, 9vw, 58px);
-      line-height: 0.98;
-      font-weight: 950;
-      letter-spacing: -1px;
-    }
-
-    .hero-message {
-      position: relative;
-      margin: 0;
-
-      color: #f7dddd;
-      font-size: clamp(18px, 4.7vw, 24px);
-      line-height: 1.42;
-    }
-
-    .hero-result {
-      position: relative;
-      margin-top: 22px;
-      padding: 17px;
-
-      border: 1px solid #813030;
-      border-radius: 15px;
-      background: rgba(80, 0, 0, 0.25);
-    }
-
-    .hero-label {
-      display: block;
-      margin-bottom: 7px;
-
-      color: #ffb4b0;
-      font-size: 13px;
-      font-weight: 750;
-      text-transform: uppercase;
-      letter-spacing: 0.7px;
-    }
-
-    .hero-value {
-      display: block;
-
+    .countdown {
+      margin: 18px 0 4px;
       color: #fff;
+      font-size: clamp(85px, 27vw, 160px);
+      line-height: 1;
+      font-weight: 1000;
+      text-shadow:
+        0 0 15px #fff,
+        0 0 38px var(--red);
+    }
+
+    .countdown-label {
+      margin: 0;
+      color: #d0d0d0;
+      font-size: 15px;
+    }
+
+    /* Consola */
+
+    #scan-screen {
+      position: relative;
+      z-index: 2;
+      flex-direction: column;
+      padding:
+        max(16px, env(safe-area-inset-top))
+        14px
+        max(24px, env(safe-area-inset-bottom));
+    }
+
+    .console-window {
+      width: 100%;
+      max-width: 820px;
+      margin: auto;
+      overflow: hidden;
+      border: 1px solid var(--green);
+      border-radius: 16px;
+      background: rgba(0, 8, 3, 0.92);
+      box-shadow:
+        0 0 30px rgba(49, 255, 106, 0.22),
+        inset 0 0 25px rgba(49, 255, 106, 0.05);
+      backdrop-filter: blur(5px);
+    }
+
+    .console-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--green);
+      background: rgba(0, 40, 13, 0.86);
+    }
+
+    .console-header strong {
+      display: block;
+      color: var(--green);
+      font-family: monospace;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    .console-header span {
+      color: #afc7b4;
+      font-size: 12px;
+    }
+
+    .terminal {
+      min-height: 420px;
+      max-height: 63vh;
+      overflow-y: auto;
+      padding: 16px;
       font-family:
         "SFMono-Regular",
         Consolas,
         "Liberation Mono",
         monospace;
+      font-size: clamp(13px, 3.7vw, 17px);
+      line-height: 1.55;
+    }
 
-      font-size: clamp(21px, 6vw, 31px);
+    .console-line {
+      display: none;
+      margin: 6px 0;
+      word-break: break-word;
+    }
+
+    .console-line.visible {
+      display: block;
+      animation: lineAppear 0.2s ease-out;
+    }
+
+    .tag-ok {
+      color: var(--green);
       font-weight: 900;
+    }
+
+    .tag-info {
+      color: var(--blue);
+      font-weight: 900;
+    }
+
+    .tag-warning {
+      color: var(--yellow);
+      font-weight: 900;
+    }
+
+    .tag-danger {
+      color: var(--red);
+      font-weight: 900;
+    }
+
+    .console-data {
+      color: #9edfff;
+      font-weight: 800;
+    }
+
+    .progress-section {
+      display: none;
+      margin: 18px 0 4px;
+    }
+
+    .progress-section.visible {
+      display: block;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: #d3e5d7;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      overflow: hidden;
+      border: 1px solid #488d5d;
+      background: #071109;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background:
+        repeating-linear-gradient(
+          135deg,
+          #1dff5d,
+          #1dff5d 10px,
+          #08782d 10px,
+          #08782d 20px
+        );
+      box-shadow: 0 0 16px var(--green);
+      transition: width 0.18s linear;
+    }
+
+    .exposure-confirmed {
+      display: none;
+      margin: 20px 0 2px;
+      padding: 18px;
+      border: 2px solid var(--red);
+      background: rgba(110, 0, 0, 0.25);
+      text-align: center;
+      animation: redFlash 0.45s infinite alternate;
+    }
+
+    .exposure-confirmed.visible {
+      display: block;
+    }
+
+    .exposure-confirmed strong {
+      display: block;
+      color: var(--red);
+      font-size: clamp(24px, 7vw, 39px);
+    }
+
+    .exposure-confirmed span {
+      display: block;
+      margin-top: 7px;
+      color: #fff;
+      font-size: 15px;
+    }
+
+    /* Resultados */
+
+    #result-screen {
+      position: relative;
+      z-index: 2;
+      flex-direction: column;
+      padding:
+        max(20px, env(safe-area-inset-top))
+        14px
+        max(30px, env(safe-area-inset-bottom));
+      background: rgba(0, 0, 0, 0.76);
+    }
+
+    .result-container {
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .result-hero {
+      padding: 23px 18px;
+      border: 2px solid var(--red);
+      border-radius: 18px;
+      background:
+        radial-gradient(
+          circle at top right,
+          rgba(255, 52, 52, 0.25),
+          transparent 44%
+        ),
+        rgba(30, 0, 0, 0.9);
+      box-shadow: 0 0 28px rgba(255, 52, 52, 0.28);
+    }
+
+    .result-badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border: 1px solid var(--red);
+      border-radius: 999px;
+      color: var(--red);
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .result-title {
+      margin: 17px 0 10px;
+      color: var(--red);
+      font-size: clamp(32px, 9vw, 55px);
+      line-height: 1;
+      font-weight: 1000;
+    }
+
+    .result-description {
+      margin: 0;
+      color: #ffe4e4;
+      font-size: 18px;
+      line-height: 1.48;
+    }
+
+    .main-ip-box {
+      margin-top: 19px;
+      padding: 17px;
+      border: 1px solid #963e3e;
+      border-radius: 14px;
+      background: rgba(90, 0, 0, 0.28);
+    }
+
+    .main-ip-box span {
+      display: block;
+      color: #ffb5b5;
+      font-size: 13px;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .main-ip-box strong {
+      display: block;
+      margin-top: 8px;
+      color: #fff;
+      font-family: monospace;
+      font-size: clamp(22px, 6vw, 32px);
       word-break: break-all;
     }
 
-    .hero-note {
-      position: relative;
-      margin: 15px 0 0;
-
-      color: #d0b8b8;
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    /* Secciones */
-
-    .section {
-      margin-top: 17px;
+    .section-card {
+      margin-top: 16px;
       padding: 18px;
-
       border: 1px solid var(--border);
-      border-radius: 18px;
+      border-radius: 17px;
       background: var(--panel);
+      backdrop-filter: blur(5px);
     }
 
-    .section-title {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-
+    .section-card h2 {
       margin: 0 0 15px;
-
-      color: var(--white);
+      color: var(--green-soft);
       font-size: 21px;
-      line-height: 1.25;
-    }
-
-    .section-icon {
-      flex: 0 0 auto;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      width: 26px;
-      height: 26px;
-
-      border-radius: 50%;
-      background: rgba(100, 210, 255, 0.12);
-      color: var(--blue);
-
-      font-size: 15px;
-      font-weight: 900;
-    }
-
-    .section-description {
-      margin: -5px 0 16px;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.5;
-    }
-
-    /* Datos */
-
-    .data-list {
-      display: grid;
-      gap: 10px;
     }
 
     .data-row {
       display: grid;
-      grid-template-columns: minmax(115px, 40%) 1fr;
-      gap: 12px;
-
+      grid-template-columns: minmax(120px, 42%) 1fr;
+      gap: 10px;
       align-items: center;
-
+      margin-top: 9px;
       padding: 13px;
-      border: 1px solid #29332c;
-      border-radius: 13px;
-      background: var(--panel-light);
+      border: 1px solid #1d4228;
+      border-radius: 12px;
+      background: rgba(4, 18, 9, 0.92);
     }
 
-    .data-row.important {
-      border-color: #794040;
-      background: rgba(96, 16, 16, 0.16);
-    }
-
-    .label {
+    .data-label {
       color: var(--muted);
       font-size: 14px;
       line-height: 1.35;
     }
 
-    .value {
+    .data-value {
       color: var(--blue);
-
-      font-family:
-        "SFMono-Regular",
-        Consolas,
-        "Liberation Mono",
-        monospace;
-
+      font-family: monospace;
       font-size: 14px;
       font-weight: 800;
-      line-height: 1.35;
-
+      line-height: 1.4;
       text-align: right;
       word-break: break-word;
     }
 
-    .value.loading {
-      color: var(--yellow);
-      animation: fade 0.9s infinite alternate;
-    }
-
-    .value.error {
-      color: #ff9b95;
-    }
-
-    /* Aclaración ubicación IP */
-
-    .ip-warning {
-      margin-top: 14px;
+    .clarification {
+      margin-top: 13px;
       padding: 13px;
-
       border-left: 4px solid var(--yellow);
-      background: rgba(255, 214, 10, 0.07);
-
-      color: #fff0a6;
+      background: rgba(255, 214, 10, 0.08);
+      color: #fff1a3;
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.48;
     }
 
     /* Botón ubicación */
 
-    .location-action {
+    .location-button {
       width: 100%;
-
-      padding: 17px 18px;
-
+      margin-top: 5px;
+      padding: 17px;
       border: 1px solid var(--red);
-      border-radius: 14px;
-
+      border-radius: 13px;
       background:
         linear-gradient(
           180deg,
-          #a51e1e 0%,
-          #681010 100%
+          #ac2020,
+          #650c0c
         );
-
       color: #fff;
-
       font-size: 17px;
       font-weight: 900;
-
       cursor: pointer;
-
-      box-shadow:
-        0 0 22px rgba(255, 59, 48, 0.16);
+      box-shadow: 0 0 20px rgba(255, 52, 52, 0.2);
     }
 
-    .location-action:disabled {
+    .location-button:disabled {
       opacity: 0.65;
-      cursor: default;
     }
 
-    .location-disclaimer {
-      margin: 12px 3px 0;
-
-      color: var(--muted);
+    .location-help {
+      margin: 11px 0 0;
+      color: #9da99f;
       font-size: 12px;
       line-height: 1.45;
       text-align: center;
     }
 
-    .status {
+    .location-status {
       display: none;
-      margin-top: 14px;
+      margin-top: 13px;
       padding: 13px;
-
-      border-radius: 12px;
-
-      color: #d9efff;
-      background: rgba(100, 210, 255, 0.08);
-
+      border-radius: 11px;
+      background: rgba(97, 213, 255, 0.1);
+      color: #d6f4ff;
       font-size: 14px;
       line-height: 1.45;
     }
 
-    .status.visible {
+    .location-status.visible {
       display: block;
     }
 
-    .status.error {
-      color: #ffd7d4;
-      background: rgba(255, 59, 48, 0.11);
+    .location-status.error {
+      background: rgba(255, 52, 52, 0.12);
+      color: #ffd1d1;
     }
 
-    /* Resultado de ubicación */
-
-    #location-result {
+    #precise-location-card {
       display: none;
     }
 
-    #location-result.visible {
+    #precise-location-card.visible {
       display: block;
     }
 
-    .location-alert {
-      margin-bottom: 17px;
-      padding: 19px;
-
+    .location-impact {
+      margin-bottom: 16px;
+      padding: 18px;
       border: 2px solid var(--red);
-      border-radius: 17px;
-
-      background:
-        radial-gradient(
-          circle at center,
-          rgba(255, 59, 48, 0.17),
-          rgba(80, 0, 0, 0.1)
-        );
-
+      border-radius: 14px;
+      background: rgba(96, 0, 0, 0.27);
       text-align: center;
     }
 
-    .location-alert strong {
+    .location-impact strong {
       display: block;
-
       color: var(--red);
-      font-size: clamp(25px, 7vw, 39px);
-      line-height: 1.05;
+      font-size: clamp(25px, 7vw, 38px);
     }
 
-    .location-alert span {
+    .location-impact span {
       display: block;
-      margin-top: 10px;
-
-      color: #fff;
-      font-size: 17px;
-      line-height: 1.4;
+      margin-top: 8px;
+      font-size: 16px;
     }
 
-    .accuracy-value {
-      color: var(--yellow);
-      font-size: 25px;
-      font-weight: 950;
-    }
-
-    .map-button {
+    .map-link {
       display: block;
       width: 100%;
-
-      margin-top: 14px;
+      margin-top: 13px;
       padding: 15px;
-
       border: 1px solid var(--blue);
-      border-radius: 13px;
-
-      background: rgba(100, 210, 255, 0.1);
-      color: #dff7ff;
-
-      font-size: 16px;
+      border-radius: 12px;
+      background: rgba(97, 213, 255, 0.1);
+      color: #dff8ff;
       font-weight: 850;
       text-align: center;
       text-decoration: none;
     }
 
-    /* Riesgo */
+    /* Explicación final */
 
-    .risk {
-      margin-top: 17px;
+    .final-warning {
+      margin-top: 16px;
       padding: 19px;
-
-      border: 1px solid #723333;
-      border-radius: 18px;
-
-      background: rgba(102, 0, 0, 0.16);
+      border: 1px solid #774040;
+      border-radius: 17px;
+      background: rgba(85, 0, 0, 0.22);
     }
 
-    .risk h2 {
-      margin: 0 0 13px;
-
+    .final-warning h2 {
+      margin: 0 0 12px;
       color: var(--red);
-      font-size: 24px;
+      font-size: 23px;
     }
 
-    .risk p {
+    .final-warning p {
       margin: 10px 0;
-
-      color: #ffe6e4;
+      color: #ffe2e2;
       font-size: 16px;
-      line-height: 1.52;
+      line-height: 1.5;
     }
 
-    .risk strong {
+    .final-warning strong {
       color: #fff;
     }
 
-    .limitations {
-      margin-top: 17px;
-      padding: 17px;
-
-      border: 1px solid #343434;
-      border-radius: 17px;
-
-      background: #0b0b0b;
-    }
-
-    .limitations h2 {
-      margin: 0 0 11px;
-
-      color: var(--yellow);
-      font-size: 19px;
-    }
-
-    .limitations p {
-      margin: 8px 0;
-
-      color: #bdbdbd;
-      font-size: 14px;
-      line-height: 1.48;
+    .restart-button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 15px;
+      border: 1px solid #667268;
+      border-radius: 12px;
+      background: #111511;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
     }
 
     .footer {
-      margin-top: 20px;
-
-      color: #737873;
+      margin-top: 17px;
+      color: #778079;
       font-size: 12px;
       line-height: 1.5;
       text-align: center;
     }
 
-    @keyframes pulse {
+    .screen-shake {
+      animation: shake 0.18s linear 4;
+    }
+
+    @keyframes alertPulse {
       from {
-        opacity: 0.45;
-        transform: scale(0.9);
+        box-shadow:
+          0 0 15px rgba(255, 0, 0, 0.42),
+          inset 0 0 20px rgba(255, 0, 0, 0.08);
+      }
+
+      to {
+        box-shadow:
+          0 0 38px rgba(255, 0, 0, 0.82),
+          inset 0 0 32px rgba(255, 0, 0, 0.18);
+      }
+    }
+
+    @keyframes lineAppear {
+      from {
+        opacity: 0;
+        transform: translateX(-8px);
       }
 
       to {
         opacity: 1;
-        transform: scale(1.15);
+        transform: translateX(0);
       }
     }
 
-    @keyframes fade {
+    @keyframes redFlash {
       from {
-        opacity: 0.5;
+        box-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
       }
 
       to {
-        opacity: 1;
+        box-shadow:
+          0 0 24px rgba(255, 0, 0, 0.9),
+          inset 0 0 20px rgba(255, 0, 0, 0.15);
       }
     }
 
-    @media (min-width: 650px) {
-      body {
-        padding-left: 26px;
-        padding-right: 26px;
+    @keyframes shake {
+      0% {
+        transform: translate(0);
       }
 
-      .section,
-      .hero {
-        padding: 24px;
+      25% {
+        transform: translate(-4px, 2px);
       }
 
-      .data-list.two-columns {
-        grid-template-columns: 1fr 1fr;
+      50% {
+        transform: translate(4px, -2px);
       }
 
-      .data-list.two-columns .wide {
-        grid-column: 1 / -1;
+      75% {
+        transform: translate(-3px, -1px);
+      }
+
+      100% {
+        transform: translate(0);
       }
     }
   </style>
@@ -558,605 +695,662 @@
 
 <body>
 
-  <main class="container">
+  <canvas id="matrix-canvas"></canvas>
+  <div class="matrix-overlay"></div>
 
-    <!-- Encabezado -->
+  <!-- Pantalla 1 -->
 
-    <section class="hero">
+  <section id="warning-screen" class="screen active">
 
-      <div class="alert-badge">
-        <span class="alert-dot"></span>
-        EXPOSICIÓN DE INFORMACIÓN
-      </div>
+    <div class="warning-panel">
 
-      <h1 id="hero-title">
-        Este sitio ya identificó tu conexión
+      <div class="warning-symbol">!</div>
+
+      <h1 class="warning-title">
+        CONEXIÓN NFC<br>
+        NO VERIFICADA
       </h1>
 
-      <p id="hero-message" class="hero-message">
-        No instalaste una aplicación. Solo abriste el enlace contenido
-        en una etiqueta NFC.
+      <p class="warning-subtitle">
+        Se inició una sesión con un destino externo.
+        El dispositivo está compartiendo información de conexión.
       </p>
 
-      <div class="hero-result">
-        <span class="hero-label">
-          Tu dirección IPv4 pública
-        </span>
+      <div class="warning-status">
+        INICIANDO EVALUACIÓN DE EXPOSICIÓN
+      </div>
 
-        <strong
-          id="hero-ipv4"
-          class="hero-value"
+      <div id="countdown" class="countdown">3</div>
+
+      <p class="countdown-label">
+        Analizando entorno del dispositivo…
+      </p>
+
+    </div>
+
+  </section>
+
+  <!-- Pantalla 2 -->
+
+  <section id="scan-screen" class="screen">
+
+    <div class="console-window">
+
+      <header class="console-header">
+        <strong>NFC SECURITY ANALYZER</strong>
+        <span>Sesión externa · análisis en tiempo real</span>
+      </header>
+
+      <main id="terminal" class="terminal">
+
+        <div class="console-line">
+          <span class="tag-ok">[OK]</span>
+          Enlace externo abierto desde etiqueta NFC.
+        </div>
+
+        <div class="console-line">
+          <span class="tag-ok">[OK]</span>
+          Sesión HTTPS establecida.
+        </div>
+
+        <div class="console-line">
+          <span class="tag-info">[INFO]</span>
+          IPv4 pública:
+          <span id="console-ipv4" class="console-data">
+            consultando…
+          </span>
+        </div>
+
+        <div class="console-line">
+          <span class="tag-info">[INFO]</span>
+          Proveedor:
+          <span id="console-provider" class="console-data">
+            consultando…
+          </span>
+        </div>
+
+        <div class="console-line">
+          <span class="tag-info">[INFO]</span>
+          Dispositivo:
+          <span id="console-device" class="console-data"></span>
+        </div>
+
+        <div class="console-line">
+          <span class="tag-info">[INFO]</span>
+          Sistema:
+          <span id="console-system" class="console-data"></span>
+        </div>
+
+        <div class="console-line">
+          <span class="tag-info">[INFO]</span>
+          Navegador:
+          <span id="console-browser" class="console-data"></span>
+        </div>
+
+        <div class="console-line">
+          <span class="tag-info">[INFO]</span>
+          Idioma:
+          <span id="console-language" class="console-data"></span>
+        </div>
+
+        <div class="console-line">
+          <span class="tag-info">[INFO]</span>
+          Zona horaria:
+          <span id="console-timezone" class="console-data"></span>
+        </div>
+
+        <div class="console-line">
+          <span class="tag-warning">[ALERTA]</span>
+          La identidad de la etiqueta no fue validada.
+        </div>
+
+        <div class="console-line">
+          <span class="tag-warning">[ALERTA]</span>
+          Se detectó exposición de metadatos de conexión.
+        </div>
+
+        <div class="console-line">
+          <span class="tag-danger">[RIESGO]</span>
+          El sitio podría solicitar permisos adicionales.
+        </div>
+
+        <div
+          id="progress-section"
+          class="progress-section"
         >
-          Consultando…
-        </strong>
-      </div>
-
-      <p class="hero-note">
-        Esta dirección identifica la conexión pública desde la que
-        accediste. Puede cambiar o representar la salida compartida
-        de tu proveedor.
-      </p>
-
-    </section>
-
-    <!-- Red -->
-
-    <section class="section">
-
-      <h2 class="section-title">
-        <span class="section-icon">1</span>
-        Información visible sin solicitar permisos
-      </h2>
-
-      <p class="section-description">
-        Estos datos se consultan después de abrir la página.
-        No requieren acceso a tus fotografías, cámara o GPS.
-      </p>
-
-      <div class="data-list">
-
-        <div class="data-row important">
-          <div class="label">
-            IPv4 pública
+          <div class="progress-header">
+            <span>Correlacionando información expuesta…</span>
+            <span id="progress-text">0%</span>
           </div>
 
-          <div
-            id="public-ipv4"
-            class="value loading"
-          >
-            Consultando…
+          <div class="progress-bar">
+            <div
+              id="progress-fill"
+              class="progress-fill"
+            ></div>
+          </div>
+        </div>
+
+        <div
+          id="exposure-confirmed"
+          class="exposure-confirmed"
+        >
+          <strong>EXPOSICIÓN CONFIRMADA</strong>
+
+          <span>
+            La página identificó la conexión y el entorno general
+            del dispositivo.
+          </span>
+        </div>
+
+      </main>
+
+    </div>
+
+  </section>
+
+  <!-- Pantalla 3 -->
+
+  <section id="result-screen" class="screen">
+
+    <main class="result-container">
+
+      <section class="result-hero">
+
+        <div class="result-badge">
+          RESULTADO DEL ANÁLISIS
+        </div>
+
+        <h1 id="result-main-title" class="result-title">
+          Tu conexión fue identificada
+        </h1>
+
+        <p id="result-main-description" class="result-description">
+          Esta información comenzó a estar disponible después de abrir
+          el enlace incluido en una etiqueta NFC.
+        </p>
+
+        <div class="main-ip-box">
+          <span>Tu dirección IPv4 pública</span>
+          <strong id="result-ipv4">Consultando…</strong>
+        </div>
+
+      </section>
+
+      <section class="section-card">
+
+        <h2>Información visible sin permisos adicionales</h2>
+
+        <div class="data-row">
+          <div class="data-label">IPv4 pública</div>
+          <div id="public-ipv4" class="data-value">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Proveedor de Internet</div>
+          <div id="provider" class="data-value">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Organización de red</div>
+          <div id="network-org" class="data-value">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">País estimado</div>
+          <div id="ip-country" class="data-value">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Región estimada</div>
+          <div id="ip-region" class="data-value">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Salida aproximada del proveedor</div>
+          <div id="ip-city" class="data-value">Consultando…</div>
+        </div>
+
+        <div class="clarification">
+          La ciudad estimada por IP puede representar la salida del
+          proveedor, una VPN, una red celular o un intermediario.
+          No equivale necesariamente a la ubicación real del teléfono.
+        </div>
+
+      </section>
+
+      <section class="section-card">
+
+        <h2>Entorno del dispositivo</h2>
+
+        <div class="data-row">
+          <div class="data-label">Fabricante probable</div>
+          <div id="device-brand" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Tipo de dispositivo</div>
+          <div id="device-type" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Sistema operativo</div>
+          <div id="operating-system" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Navegador</div>
+          <div id="browser-name" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Idioma</div>
+          <div id="device-language" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Zona horaria</div>
+          <div id="device-timezone" class="data-value"></div>
+        </div>
+
+      </section>
+
+      <section class="section-card">
+
+        <h2>Comprobar el alcance de un permiso</h2>
+
+        <p class="result-description">
+          Una página puede solicitar la ubicación del teléfono.
+          El sistema debe mostrar una autorización oficial antes de
+          compartirla.
+        </p>
+
+        <button
+          id="location-button"
+          class="location-button"
+          type="button"
+        >
+          Continuar y comprobar mi ubicación
+        </button>
+
+        <p class="location-help">
+          Puedes rechazar la solicitud. Sin autorización, esta página
+          no puede obtener la ubicación precisa.
+        </p>
+
+        <div
+          id="location-status"
+          class="location-status"
+        ></div>
+
+      </section>
+
+      <section
+        id="precise-location-card"
+        class="section-card"
+      >
+
+        <div class="location-impact">
+          <strong>UBICACIÓN COMPARTIDA</strong>
+
+          <span>
+            El teléfono entregó una posición con una precisión reportada
+            de <b id="accuracy-highlight">—</b>.
+          </span>
+        </div>
+
+        <h2>Datos entregados por el teléfono</h2>
+
+        <div class="data-row">
+          <div class="data-label">Precisión</div>
+          <div id="gps-accuracy" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Latitud</div>
+          <div id="gps-latitude" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Longitud</div>
+          <div id="gps-longitude" class="data-value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="data-label">Vialidad cercana</div>
+          <div id="mapped-road" class="data-value">
+            Consultando mapa…
           </div>
         </div>
 
         <div class="data-row">
-          <div class="label">
-            Proveedor de Internet
-          </div>
-
-          <div
-            id="provider"
-            class="value loading"
-          >
-            Consultando…
+          <div class="data-label">Colonia registrada en el mapa</div>
+          <div id="mapped-neighbourhood" class="data-value">
+            Consultando mapa…
           </div>
         </div>
 
         <div class="data-row">
-          <div class="label">
-            Organización de red
-          </div>
-
-          <div
-            id="network-org"
-            class="value loading"
-          >
-            Consultando…
+          <div class="data-label">Alcaldía o municipio</div>
+          <div id="mapped-municipality" class="data-value">
+            Consultando mapa…
           </div>
         </div>
 
         <div class="data-row">
-          <div class="label">
-            País estimado
-          </div>
-
-          <div
-            id="ip-country"
-            class="value loading"
-          >
-            Consultando…
+          <div class="data-label">Ciudad</div>
+          <div id="mapped-city" class="data-value">
+            Consultando mapa…
           </div>
         </div>
 
         <div class="data-row">
-          <div class="label">
-            Región estimada
-          </div>
-
-          <div
-            id="ip-region"
-            class="value loading"
-          >
-            Consultando…
+          <div class="data-label">Estado</div>
+          <div id="mapped-state" class="data-value">
+            Consultando mapa…
           </div>
         </div>
 
         <div class="data-row">
-          <div class="label">
-            Ciudad de salida estimada
-          </div>
-
-          <div
-            id="ip-city"
-            class="value loading"
-          >
-            Consultando…
+          <div class="data-label">Código postal cartográfico</div>
+          <div id="mapped-postcode" class="data-value">
+            Consultando mapa…
           </div>
         </div>
 
         <div class="data-row">
-          <div class="label">
-            Tipo de conexión
-          </div>
-
-          <div
-            id="connection-type"
-            class="value"
-          >
-            Analizando…
+          <div class="data-label">Dirección cartográfica aproximada</div>
+          <div id="mapped-address" class="data-value">
+            Consultando mapa…
           </div>
         </div>
 
-      </div>
+        <a
+          id="map-link"
+          class="map-link"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Verificar el punto en el mapa
+        </a>
 
-      <div class="ip-warning">
-        <strong>Importante:</strong>
-        la ciudad estimada por IP no representa necesariamente dónde
-        está el teléfono. Puede ser la ubicación de la salida de
-        Totalplay, Telmex, Telcel, una VPN o algún otro intermediario.
-      </div>
-
-    </section>
-
-    <!-- Dispositivo -->
-
-    <section class="section">
-
-      <h2 class="section-title">
-        <span class="section-icon">2</span>
-        Dispositivo y entorno detectados
-      </h2>
-
-      <div class="data-list">
-
-        <div class="data-row">
-          <div class="label">
-            Fabricante probable
-          </div>
-
-          <div
-            id="device-brand"
-            class="value"
-          ></div>
+        <div class="clarification">
+          La dirección es una referencia cartográfica cercana. Puede
+          corresponder a una vialidad, colonia u objeto registrado próximo
+          y no necesariamente al número exacto del inmueble.
         </div>
 
-        <div class="data-row">
-          <div class="label">
-            Tipo de dispositivo
-          </div>
+      </section>
 
-          <div
-            id="device-type"
-            class="value"
-          ></div>
-        </div>
+      <section class="final-warning">
 
-        <div class="data-row">
-          <div class="label">
-            Sistema operativo
-          </div>
+        <h2>Esto no fue una infección automática</h2>
 
-          <div
-            id="operating-system"
-            class="value"
-          ></div>
-        </div>
+        <p>
+          El NFC únicamente abrió una dirección. La página pudo consultar
+          información de red y datos generales del navegador.
+        </p>
 
-        <div class="data-row">
-          <div class="label">
-            Navegador
-          </div>
+        <p>
+          Después, si autorizaste la ubicación, el teléfono entregó
+          coordenadas reales con precisión en metros.
+        </p>
 
-          <div
-            id="browser-name"
-            class="value"
-          ></div>
-        </div>
+        <p>
+          <strong>
+            En un ataque real, una página podría combinar esta información
+            con credenciales, fotografías seleccionadas, permisos o datos
+            introducidos por la víctima.
+          </strong>
+        </p>
 
-        <div class="data-row">
-          <div class="label">
-            Idioma
-          </div>
+        <p>
+          Antes de abrir una etiqueta NFC, revisa el dominio. No concedas
+          permisos ni introduzcas información si no conoces el origen.
+        </p>
 
-          <div
-            id="device-language"
-            class="value"
-          ></div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Zona horaria
-          </div>
-
-          <div
-            id="device-timezone"
-            class="value"
-          ></div>
-        </div>
-
-      </div>
-
-    </section>
-
-    <!-- Ubicación -->
-
-    <section class="section">
-
-      <h2 class="section-title">
-        <span class="section-icon">3</span>
-        ¿Hasta dónde puede llegar un permiso?
-      </h2>
-
-      <p class="section-description">
-        Presiona el botón para comprobar qué información puede entregar
-        el teléfono cuando una persona autoriza el acceso a su ubicación.
-      </p>
+      </section>
 
       <button
-        id="location-button"
-        class="location-action"
+        class="restart-button"
         type="button"
+        onclick="location.reload()"
       >
-        Permitir y comprobar mi ubicación
+        Repetir demostración
       </button>
 
-      <p class="location-disclaimer">
-        El sistema mostrará su solicitud oficial de permiso.
-        Puedes rechazarla. La página no puede evitar esa confirmación.
-      </p>
+      <footer class="footer">
+        Demostración educativa. No se almacenan resultados en una base de
+        datos propia. Las consultas de IP y mapa utilizan servicios externos.
+      </footer>
 
-      <div
-        id="location-status"
-        class="status"
-      ></div>
+    </main>
 
-    </section>
-
-    <!-- Resultado GPS -->
-
-    <section
-      id="location-result"
-      class="section"
-    >
-
-      <div class="location-alert">
-
-        <strong>
-          UBICACIÓN COMPARTIDA
-        </strong>
-
-        <span>
-          Este sitio recibió la posición del teléfono con una precisión
-          reportada de
-          <span
-            id="accuracy-highlight"
-            class="accuracy-value"
-          >
-            —
-          </span>.
-        </span>
-
-      </div>
-
-      <h2 class="section-title">
-        <span class="section-icon">!</span>
-        Información entregada por el dispositivo
-      </h2>
-
-      <div class="data-list">
-
-        <div class="data-row important">
-          <div class="label">
-            Precisión reportada
-          </div>
-
-          <div
-            id="gps-accuracy"
-            class="value"
-          ></div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Latitud
-          </div>
-
-          <div
-            id="gps-latitude"
-            class="value"
-          ></div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Longitud
-          </div>
-
-          <div
-            id="gps-longitude"
-            class="value"
-          ></div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Vialidad cercana
-          </div>
-
-          <div
-            id="mapped-road"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Colonia registrada en el mapa
-          </div>
-
-          <div
-            id="mapped-neighbourhood"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Localidad registrada
-          </div>
-
-          <div
-            id="mapped-locality"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Alcaldía o municipio
-          </div>
-
-          <div
-            id="mapped-municipality"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Ciudad
-          </div>
-
-          <div
-            id="mapped-city"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Estado
-          </div>
-
-          <div
-            id="mapped-state"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Código postal cartográfico
-          </div>
-
-          <div
-            id="mapped-postcode"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-        <div class="data-row">
-          <div class="label">
-            Dirección cartográfica aproximada
-          </div>
-
-          <div
-            id="mapped-address"
-            class="value loading"
-          >
-            Consultando mapa…
-          </div>
-        </div>
-
-      </div>
-
-      <a
-        id="map-link"
-        class="map-button"
-        href="#"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Comprobar este punto en el mapa
-      </a>
-
-      <div class="ip-warning">
-        La dirección cartográfica puede corresponder al objeto o vialidad
-        más cercanos registrados en OpenStreetMap. No necesariamente
-        representa el número exacto del inmueble.
-      </div>
-
-    </section>
-
-    <!-- Explicación final -->
-
-    <section class="risk">
-
-      <h2>
-        ¿Por qué esto importa?
-      </h2>
-
-      <p>
-        La etiqueta NFC no necesitó vulnerar el sistema operativo.
-        Solo necesitó convencerte de abrir una dirección.
-      </p>
-
-      <p>
-        Al principio, el sitio identificó tu conexión y datos generales
-        del dispositivo. Después, al autorizar la ubicación, recibió
-        coordenadas con precisión en metros.
-      </p>
-
-      <p>
-        <strong>
-          En una página maliciosa, esos datos podrían almacenarse,
-          relacionarse con una cuenta, acompañarse de una contraseña
-          capturada o utilizarse para personalizar un fraude.
-        </strong>
-      </p>
-
-      <p>
-        No abras etiquetas NFC desconocidas y no concedas permisos sin
-        revisar primero el dominio y el propósito de la página.
-      </p>
-
-    </section>
-
-    <!-- Limitaciones reales -->
-
-    <section class="limitations">
-
-      <h2>
-        Información que esta página no puede obtener
-      </h2>
-
-      <p>
-        Una página normal no puede consultar la dirección MAC, el nombre
-        personal del teléfono, la contraseña de Wi-Fi, el nombre de la red
-        Wi-Fi ni el nombre del propietario.
-      </p>
-
-      <p>
-        Tampoco puede acceder automáticamente a fotografías, contactos o
-        archivos. Esos recursos requieren selección, permiso adicional o
-        una aplicación con capacidades distintas.
-      </p>
-
-    </section>
-
-    <footer class="footer">
-      Demostración educativa. La página no posee una base de datos ni envía
-      resultados a un servidor administrado por el creador. Las consultas
-      de IPv4, red y dirección cartográfica utilizan servicios externos.
-    </footer>
-
-  </main>
+  </section>
 
   <script>
     "use strict";
 
-    const getElement = (id) =>
+    const element = (id) =>
       document.getElementById(id);
 
-    function setValue(id, value, state = "") {
-      const element = getElement(id);
+    const warningScreen =
+      element("warning-screen");
 
-      if (!element) {
+    const scanScreen =
+      element("scan-screen");
+
+    const resultScreen =
+      element("result-screen");
+
+    const consoleLines =
+      document.querySelectorAll(".console-line");
+
+    const collectedData = {
+      ipv4: "No disponible",
+      provider: "No identificado",
+      networkOrg: "No identificada",
+      country: "No identificado",
+      region: "No identificada",
+      city: "No identificada"
+    };
+
+    /* Matrix */
+
+    function startMatrixAnimation() {
+      const canvas =
+        element("matrix-canvas");
+
+      const context =
+        canvas.getContext("2d");
+
+      const characters =
+        "01ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+        "アイウエオカキクケコサシスセソ" +
+        "NFCSECURITYACCESSNETWORK";
+
+      let fontSize = 16;
+      let columns = [];
+      let drops = [];
+
+      function resizeCanvas() {
+        canvas.width =
+          window.innerWidth;
+
+        canvas.height =
+          window.innerHeight;
+
+        fontSize =
+          window.innerWidth < 500
+            ? 14
+            : 17;
+
+        const columnCount =
+          Math.floor(
+            canvas.width / fontSize
+          );
+
+        columns =
+          new Array(columnCount).fill(0);
+
+        drops =
+          columns.map(() =>
+            Math.floor(
+              Math.random() * -40
+            )
+          );
+      }
+
+      function drawMatrix() {
+        context.fillStyle =
+          "rgba(0, 0, 0, 0.075)";
+
+        context.fillRect(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        context.fillStyle =
+          "#19ff5a";
+
+        context.font =
+          `${fontSize}px monospace`;
+
+        drops.forEach(
+          (drop,
+           index) => {
+            const character =
+              characters.charAt(
+                Math.floor(
+                  Math.random() *
+                  characters.length
+                )
+              );
+
+            context.fillText(
+              character,
+              index * fontSize,
+              drop * fontSize
+            );
+
+            if (
+              drop * fontSize >
+                canvas.height &&
+              Math.random() > 0.975
+            ) {
+              drops[index] = 0;
+            } else {
+              drops[index] += 1;
+            }
+          }
+        );
+      }
+
+      resizeCanvas();
+
+      window.addEventListener(
+        "resize",
+        resizeCanvas
+      );
+
+      setInterval(
+        drawMatrix,
+        48
+      );
+    }
+
+    /* Utilidades */
+
+    function setText(
+      id,
+      value
+    ) {
+      const target =
+        element(id);
+
+      if (!target) {
         return;
       }
 
-      const finalValue =
+      target.textContent =
         value === undefined ||
         value === null ||
         String(value).trim() === ""
           ? "No disponible"
           : String(value);
-
-      element.textContent = finalValue;
-
-      element.classList.remove(
-        "loading",
-        "error"
-      );
-
-      if (state) {
-        element.classList.add(state);
-      }
     }
 
-    function setMultipleError(ids, message) {
-      ids.forEach((id) => {
-        setValue(id, message, "error");
-      });
+    function changeScreen(
+      currentScreen,
+      nextScreen
+    ) {
+      currentScreen.classList.remove(
+        "active"
+      );
+
+      nextScreen.classList.add(
+        "active"
+      );
+
+      window.scrollTo(0, 0);
     }
 
-    /* Detección general del dispositivo */
-
-    function detectIOSVersion(userAgent) {
-      const match = userAgent.match(
-        /OS (\d+)[._](\d+)(?:[._](\d+))?/i
+    function shakeScreen() {
+      document.body.classList.add(
+        "screen-shake"
       );
+
+      setTimeout(() => {
+        document.body.classList.remove(
+          "screen-shake"
+        );
+      }, 750);
+    }
+
+    /* Dispositivo */
+
+    function detectIOSVersion(
+      userAgent
+    ) {
+      const match =
+        userAgent.match(
+          /OS (\d+)[._](\d+)(?:[._](\d+))?/i
+        );
 
       if (!match) {
         return "iOS";
       }
 
-      const version = [
-        match[1],
-        match[2],
-        match[3]
-      ]
-        .filter(Boolean)
-        .join(".");
-
-      return `iOS ${version}`;
+      return `iOS ${
+        [
+          match[1],
+          match[2],
+          match[3]
+        ]
+          .filter(Boolean)
+          .join(".")
+      }`;
     }
 
-    function detectAndroidVersion(userAgent) {
-      const match = userAgent.match(
-        /Android\s([0-9.]+)/i
-      );
+    function detectAndroidVersion(
+      userAgent
+    ) {
+      const match =
+        userAgent.match(
+          /Android\s([0-9.]+)/i
+        );
 
       return match
         ? `Android ${match[1]}`
         : "Android";
     }
 
-    function detectAndroidBrand(userAgent) {
+    function detectAndroidBrand(
+      userAgent
+    ) {
       const brands = [
         ["Samsung", /Samsung|SM-/i],
         ["Google", /Pixel/i],
@@ -1169,13 +1363,16 @@
         ["vivo", /vivo/i],
         ["realme", /realme/i],
         ["Sony", /Sony/i],
-        ["Nokia", /Nokia/i],
-        ["ASUS", /ASUS/i],
-        ["ZTE", /ZTE/i]
+        ["Nokia", /Nokia/i]
       ];
 
-      for (const [brand, pattern] of brands) {
-        if (pattern.test(userAgent)) {
+      for (
+        const [brand, pattern]
+        of brands
+      ) {
+        if (
+          pattern.test(userAgent)
+        ) {
           return brand;
         }
       }
@@ -1183,7 +1380,9 @@
       return "Fabricante Android no expuesto";
     }
 
-    function detectBrowser(userAgent) {
+    function detectBrowser(
+      userAgent
+    ) {
       if (/CriOS/i.test(userAgent)) {
         return "Google Chrome para iOS";
       }
@@ -1196,23 +1395,16 @@
         return "Microsoft Edge para iOS";
       }
 
-      if (/OPiOS/i.test(userAgent)) {
-        return "Opera para iOS";
-      }
-
       if (
         /Safari/i.test(userAgent) &&
-        !/Chrome|CriOS|Edg|OPR|FxiOS/i.test(userAgent)
+        !/Chrome|CriOS|Edg|OPR|FxiOS/i
+          .test(userAgent)
       ) {
         return "Safari";
       }
 
       if (/Edg/i.test(userAgent)) {
         return "Microsoft Edge";
-      }
-
-      if (/OPR|Opera/i.test(userAgent)) {
-        return "Opera";
       }
 
       if (/Firefox/i.test(userAgent)) {
@@ -1233,37 +1425,47 @@
       const platform =
         navigator.platform || "";
 
-      let brand = "No identificado";
-      let type = "Dispositivo no identificado";
-      let operatingSystem = "No identificado";
+      let brand =
+        "No identificado";
+
+      let type =
+        "Dispositivo no identificado";
+
+      let operatingSystem =
+        "No identificado";
 
       if (/iPhone/i.test(userAgent)) {
         brand = "Apple";
         type = "iPhone";
         operatingSystem =
           detectIOSVersion(userAgent);
-      } else if (/iPad/i.test(userAgent)) {
+      } else if (
+        /iPad/i.test(userAgent)
+      ) {
         brand = "Apple";
         type = "iPad";
         operatingSystem =
           detectIOSVersion(userAgent)
-            .replace("iOS", "iPadOS");
+            .replace(
+              "iOS",
+              "iPadOS"
+            );
       } else if (
-        /Macintosh/i.test(userAgent) &&
-        navigator.maxTouchPoints > 1
+        /Android/i.test(userAgent)
       ) {
-        brand = "Apple";
-        type = "iPad";
-        operatingSystem = "iPadOS";
-      } else if (/Android/i.test(userAgent)) {
-        brand = detectAndroidBrand(userAgent);
-        type = /Mobile/i.test(userAgent)
-          ? "Teléfono Android"
-          : "Tableta Android";
+        brand =
+          detectAndroidBrand(userAgent);
+
+        type =
+          /Mobile/i.test(userAgent)
+            ? "Teléfono Android"
+            : "Tableta Android";
 
         operatingSystem =
           detectAndroidVersion(userAgent);
-      } else if (/Windows/i.test(userAgent)) {
+      } else if (
+        /Windows/i.test(userAgent)
+      ) {
         brand = "No expuesto";
         type = "Computadora";
         operatingSystem = "Windows";
@@ -1275,7 +1477,9 @@
         brand = "Apple";
         type = "Mac";
         operatingSystem = "macOS";
-      } else if (/Linux/i.test(userAgent)) {
+      } else if (
+        /Linux/i.test(userAgent)
+      ) {
         brand = "No expuesto";
         type = "Computadora";
         operatingSystem = "Linux";
@@ -1285,95 +1489,89 @@
         brand,
         type,
         operatingSystem,
-        browser: detectBrowser(userAgent)
+        browser:
+          detectBrowser(userAgent),
+        language:
+          navigator.language ||
+          "No expuesto",
+        timezone:
+          Intl.DateTimeFormat()
+            .resolvedOptions()
+            .timeZone ||
+          "No expuesta"
       };
     }
 
-    function populateDeviceInformation() {
-      const device = detectDevice();
+    function populateDeviceData() {
+      const device =
+        detectDevice();
 
-      setValue(
+      setText(
+        "console-device",
+        `${device.brand} · ${device.type}`
+      );
+
+      setText(
+        "console-system",
+        device.operatingSystem
+      );
+
+      setText(
+        "console-browser",
+        device.browser
+      );
+
+      setText(
+        "console-language",
+        device.language
+      );
+
+      setText(
+        "console-timezone",
+        device.timezone
+      );
+
+      setText(
         "device-brand",
         device.brand
       );
 
-      setValue(
+      setText(
         "device-type",
         device.type
       );
 
-      setValue(
+      setText(
         "operating-system",
         device.operatingSystem
       );
 
-      setValue(
+      setText(
         "browser-name",
         device.browser
       );
 
-      setValue(
+      setText(
         "device-language",
-        navigator.language ||
-        "No expuesto"
+        device.language
       );
 
-      setValue(
+      setText(
         "device-timezone",
-        Intl.DateTimeFormat()
-          .resolvedOptions()
-          .timeZone ||
-        "No expuesta"
-      );
-
-      setValue(
-        "connection-type",
-        detectConnectionType()
+        device.timezone
       );
     }
 
-    /* Tipo de conexión */
+    /* IP pública */
 
-    function detectConnectionType() {
-      if (!navigator.onLine) {
-        return "Sin conexión";
-      }
-
-      const connection =
-        navigator.connection ||
-        navigator.mozConnection ||
-        navigator.webkitConnection;
-
-      if (!connection?.type) {
-        return "Conectado; tecnología no expuesta";
-      }
-
-      const connectionNames = {
-        wifi: "Wi-Fi",
-        cellular: "Red celular",
-        ethernet: "Ethernet",
-        bluetooth: "Bluetooth",
-        wimax: "WiMAX",
-        other: "Otra tecnología",
-        none: "Sin conexión",
-        unknown: "No identificada"
-      };
-
-      return (
-        connectionNames[connection.type] ||
-        connection.type
-      );
-    }
-
-    /* IPv4 pública */
-
-    async function obtainPublicIPv4() {
-      const response = await fetch(
-        "https://api4.ipify.org?format=json",
-        {
-          cache: "no-store"
-        }
-      );
+    async function obtainIPv4() {
+      const response =
+        await fetch(
+          "https://api4.ipify.org?format=json",
+          {
+            cache: "no-store"
+          }
+        );
 
       if (!response.ok) {
         throw new Error(
@@ -1381,166 +1579,345 @@
         );
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!data.ip) {
         throw new Error(
-          "El servicio no devolvió una IPv4"
+          "IPv4 vacía"
         );
       }
 
       return data.ip;
     }
 
-    /* Información del proveedor usando la IPv4 */
-
-    async function obtainIPv4Information(ipv4) {
-      const response = await fetch(
-        `https://ipwho.is/${encodeURIComponent(ipv4)}`,
-        {
-          cache: "no-store"
-        }
-      );
+    async function obtainIPDetails(
+      ipv4
+    ) {
+      const response =
+        await fetch(
+          `https://ipwho.is/${
+            encodeURIComponent(ipv4)
+          }`,
+          {
+            cache: "no-store"
+          }
+        );
 
       if (!response.ok) {
         throw new Error(
-          `Información IP HTTP ${response.status}`
+          `IP details HTTP ${
+            response.status
+          }`
         );
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
-      if (data.success === false) {
+      if (
+        data.success === false
+      ) {
         throw new Error(
           data.message ||
-          "Consulta de red rechazada"
+          "Consulta rechazada"
         );
       }
 
       return data;
     }
 
-    async function loadNetworkInformation() {
-      const networkFields = [
-        "public-ipv4",
-        "provider",
-        "network-org",
-        "ip-country",
-        "ip-region",
-        "ip-city"
-      ];
-
+    async function loadNetworkData() {
       try {
         const ipv4 =
-          await obtainPublicIPv4();
+          await obtainIPv4();
 
-        setValue(
-          "hero-ipv4",
+        collectedData.ipv4 =
+          ipv4;
+
+        setText(
+          "console-ipv4",
           ipv4
         );
 
-        setValue(
+        setText(
+          "result-ipv4",
+          ipv4
+        );
+
+        setText(
           "public-ipv4",
           ipv4
         );
 
         try {
-          const data =
-            await obtainIPv4Information(ipv4);
+          const details =
+            await obtainIPDetails(
+              ipv4
+            );
 
-          setValue(
+          collectedData.provider =
+            details.connection?.isp ||
+            details.connection?.org ||
+            "No identificado";
+
+          collectedData.networkOrg =
+            details.connection?.org ||
+            details.connection?.domain ||
+            "No identificada";
+
+          collectedData.country =
+            details.country ||
+            "No identificado";
+
+          collectedData.region =
+            details.region ||
+            "No identificada";
+
+          collectedData.city =
+            details.city ||
+            "No identificada";
+
+          setText(
+            "console-provider",
+            collectedData.provider
+          );
+
+          setText(
             "provider",
-            data.connection?.isp ||
-            data.connection?.org ||
-            "No identificado"
+            collectedData.provider
           );
 
-          setValue(
+          setText(
             "network-org",
-            data.connection?.org ||
-            data.connection?.domain ||
-            "No identificada"
+            collectedData.networkOrg
           );
 
-          setValue(
+          setText(
             "ip-country",
-            data.country ||
-            "No identificado"
+            collectedData.country
           );
 
-          setValue(
+          setText(
             "ip-region",
-            data.region ||
-            "No identificada"
+            collectedData.region
           );
 
-          setValue(
+          setText(
             "ip-city",
-            data.city ||
-            "No identificada"
+            collectedData.city
           );
-        } catch (networkError) {
+        } catch (error) {
           console.error(
-            "Error consultando proveedor:",
-            networkError
+            "Detalles IP:",
+            error
           );
 
-          setMultipleError(
-            [
-              "provider",
-              "network-org",
-              "ip-country",
-              "ip-region",
-              "ip-city"
-            ],
+          setText(
+            "console-provider",
+            "Consulta no disponible"
+          );
+
+          setText(
+            "provider",
+            "Consulta no disponible"
+          );
+
+          setText(
+            "network-org",
+            "Consulta no disponible"
+          );
+
+          setText(
+            "ip-country",
+            "Consulta no disponible"
+          );
+
+          setText(
+            "ip-region",
+            "Consulta no disponible"
+          );
+
+          setText(
+            "ip-city",
             "Consulta no disponible"
           );
         }
-      } catch (ipv4Error) {
+      } catch (error) {
         console.error(
-          "Error obteniendo IPv4:",
-          ipv4Error
+          "IPv4:",
+          error
         );
 
-        setValue(
-          "hero-ipv4",
-          "IPv4 no disponible",
-          "error"
+        setText(
+          "console-ipv4",
+          "IPv4 no disponible"
         );
 
-        setMultipleError(
-          networkFields,
-          "No disponible en esta conexión"
+        setText(
+          "result-ipv4",
+          "IPv4 no disponible"
+        );
+
+        setText(
+          "public-ipv4",
+          "IPv4 no disponible"
+        );
+
+        setText(
+          "console-provider",
+          "No disponible"
         );
       }
     }
 
-    /* Estado de ubicación */
+    /* Secuencia */
+
+    function startCountdown() {
+      let remaining = 3;
+
+      const countdown =
+        element("countdown");
+
+      const timer =
+        setInterval(() => {
+          remaining -= 1;
+
+          countdown.textContent =
+            remaining;
+
+          shakeScreen();
+
+          if (remaining <= 0) {
+            clearInterval(timer);
+
+            changeScreen(
+              warningScreen,
+              scanScreen
+            );
+
+            showConsoleLines();
+          }
+        }, 900);
+    }
+
+    function showConsoleLines() {
+      let index = 0;
+
+      const timer =
+        setInterval(() => {
+          if (
+            index <
+            consoleLines.length
+          ) {
+            consoleLines[index]
+              .classList.add(
+                "visible"
+              );
+
+            consoleLines[index]
+              .scrollIntoView({
+                behavior: "smooth",
+                block: "end"
+              });
+
+            index += 1;
+            return;
+          }
+
+          clearInterval(timer);
+          startProgress();
+        }, 430);
+    }
+
+    function startProgress() {
+      const section =
+        element("progress-section");
+
+      const fill =
+        element("progress-fill");
+
+      const text =
+        element("progress-text");
+
+      section.classList.add(
+        "visible"
+      );
+
+      let progress = 0;
+
+      const timer =
+        setInterval(() => {
+          progress +=
+            Math.floor(
+              Math.random() * 11
+            ) + 5;
+
+          if (progress > 100) {
+            progress = 100;
+          }
+
+          fill.style.width =
+            `${progress}%`;
+
+          text.textContent =
+            `${progress}%`;
+
+          if (progress >= 100) {
+            clearInterval(timer);
+
+            setTimeout(() => {
+              element(
+                "exposure-confirmed"
+              ).classList.add(
+                "visible"
+              );
+
+              shakeScreen();
+            }, 350);
+
+            setTimeout(() => {
+              changeScreen(
+                scanScreen,
+                resultScreen
+              );
+            }, 2300);
+          }
+        }, 240);
+    }
+
+    /* Ubicación precisa */
 
     function showLocationStatus(
       message,
       isError = false
     ) {
       const status =
-        getElement("location-status");
+        element("location-status");
 
-      status.textContent = message;
+      status.textContent =
+        message;
 
-      status.classList.add("visible");
+      status.classList.add(
+        "visible"
+      );
+
       status.classList.toggle(
         "error",
         isError
       );
     }
 
-    /* Selección segura de campos del mapa */
-
     function chooseAddressValue(
       address,
-      possibleFields
+      fields
     ) {
-      for (const field of possibleFields) {
-        const value = address?.[field];
+      for (
+        const field
+        of fields
+      ) {
+        const value =
+          address?.[field];
 
         if (
           value !== undefined &&
@@ -1554,15 +1931,14 @@
       return "No registrado en el mapa";
     }
 
-    /* Geocodificación inversa */
-
     async function reverseGeocode(
       latitude,
       longitude
     ) {
-      const url = new URL(
-        "https://nominatim.openstreetmap.org/reverse"
-      );
+      const url =
+        new URL(
+          "https://nominatim.openstreetmap.org/reverse"
+        );
 
       url.searchParams.set(
         "format",
@@ -1594,30 +1970,36 @@
         "es"
       );
 
-      const response = await fetch(
-        url.toString(),
-        {
-          headers: {
-            "Accept": "application/json"
-          },
-          cache: "no-store"
-        }
-      );
+      const response =
+        await fetch(
+          url.toString(),
+          {
+            headers: {
+              "Accept":
+                "application/json"
+            },
+            cache: "no-store"
+          }
+        );
 
       if (!response.ok) {
         throw new Error(
-          `Mapa HTTP ${response.status}`
+          `Mapa HTTP ${
+            response.status
+          }`
         );
       }
 
       return response.json();
     }
 
-    function showMapAddress(result) {
+    function populateMapAddress(
+      result
+    ) {
       const address =
         result.address || {};
 
-      setValue(
+      setText(
         "mapped-road",
         chooseAddressValue(
           address,
@@ -1631,7 +2013,7 @@
         )
       );
 
-      setValue(
+      setText(
         "mapped-neighbourhood",
         chooseAddressValue(
           address,
@@ -1644,20 +2026,7 @@
         )
       );
 
-      setValue(
-        "mapped-locality",
-        chooseAddressValue(
-          address,
-          [
-            "hamlet",
-            "village",
-            "town",
-            "locality"
-          ]
-        )
-      );
-
-      setValue(
+      setText(
         "mapped-municipality",
         chooseAddressValue(
           address,
@@ -1670,7 +2039,7 @@
         )
       );
 
-      setValue(
+      setText(
         "mapped-city",
         chooseAddressValue(
           address,
@@ -1683,7 +2052,7 @@
         )
       );
 
-      setValue(
+      setText(
         "mapped-state",
         chooseAddressValue(
           address,
@@ -1694,46 +2063,43 @@
         )
       );
 
-      setValue(
+      setText(
         "mapped-postcode",
         address.postcode ||
         "No registrado en el mapa"
       );
 
-      setValue(
+      setText(
         "mapped-address",
         result.display_name ||
         "Dirección no disponible"
       );
     }
 
-    function showMapError() {
-      const fields = [
+    function showMapFailure() {
+      [
         "mapped-road",
         "mapped-neighbourhood",
-        "mapped-locality",
         "mapped-municipality",
         "mapped-city",
         "mapped-state",
         "mapped-postcode",
         "mapped-address"
-      ];
-
-      setMultipleError(
-        fields,
-        "Información cartográfica no disponible"
-      );
+      ].forEach((id) => {
+        setText(
+          id,
+          "Información cartográfica no disponible"
+        );
+      });
     }
 
-    /* Solicitud de ubicación */
-
-    async function requestPreciseLocation() {
+    function requestLocation() {
       const button =
-        getElement("location-button");
+        element("location-button");
 
       if (!navigator.geolocation) {
         showLocationStatus(
-          "Este navegador no ofrece acceso a geolocalización.",
+          "Este navegador no permite solicitar geolocalización.",
           true
         );
 
@@ -1741,172 +2107,172 @@
       }
 
       button.disabled = true;
+
       button.textContent =
-        "Esperando autorización del teléfono…";
+        "Esperando autorización…";
 
       showLocationStatus(
         "El teléfono mostrará una solicitud oficial. " +
         "La ubicación solo se obtiene si la autorizas."
       );
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const {
-            latitude,
-            longitude,
-            accuracy
-          } = position.coords;
+      navigator.geolocation
+        .getCurrentPosition(
+          async (position) => {
+            const {
+              latitude,
+              longitude,
+              accuracy
+            } = position.coords;
 
-          const accuracyRounded =
-            Math.round(accuracy);
+            const roundedAccuracy =
+              Math.round(accuracy);
 
-          setValue(
-            "gps-latitude",
-            latitude.toFixed(6)
-          );
+            setText(
+              "gps-latitude",
+              latitude.toFixed(6)
+            );
 
-          setValue(
-            "gps-longitude",
-            longitude.toFixed(6)
-          );
+            setText(
+              "gps-longitude",
+              longitude.toFixed(6)
+            );
 
-          setValue(
-            "gps-accuracy",
-            `${accuracyRounded} metros`
-          );
+            setText(
+              "gps-accuracy",
+              `${roundedAccuracy} metros`
+            );
 
-          setValue(
-            "accuracy-highlight",
-            `${accuracyRounded} metros`
-          );
+            setText(
+              "accuracy-highlight",
+              `${roundedAccuracy} metros`
+            );
 
-          const resultSection =
-            getElement("location-result");
-
-          resultSection.classList.add(
-            "visible"
-          );
-
-          const mapUrl =
-            `https://www.openstreetmap.org/` +
-            `?mlat=${encodeURIComponent(latitude)}` +
-            `&mlon=${encodeURIComponent(longitude)}` +
-            `#map=18/${encodeURIComponent(latitude)}` +
-            `/${encodeURIComponent(longitude)}`;
-
-          getElement("map-link").href =
-            mapUrl;
-
-          getElement("hero-title").textContent =
-            "Tu ubicación fue compartida";
-
-          getElement("hero-message").textContent =
-            `El teléfono entregó coordenadas con una ` +
-            `precisión reportada de ${accuracyRounded} metros.`;
-
-          showLocationStatus(
-            "Ubicación concedida. Consultando los datos " +
-            "cartográficos cercanos…"
-          );
-
-          button.textContent =
-            "Ubicación obtenida";
-
-          setTimeout(() => {
-            resultSection.scrollIntoView({
-              behavior: "smooth",
-              block: "start"
-            });
-          }, 250);
-
-          try {
-            const mapResult =
-              await reverseGeocode(
-                latitude,
-                longitude
+            const locationCard =
+              element(
+                "precise-location-card"
               );
 
-            showMapAddress(mapResult);
-
-            showLocationStatus(
-              "Ubicación y referencias cartográficas obtenidas. " +
-              "Los nombres dependen de la información disponible " +
-              "en OpenStreetMap."
-            );
-          } catch (mapError) {
-            console.error(
-              "Error consultando mapa:",
-              mapError
+            locationCard.classList.add(
+              "visible"
             );
 
-            showMapError();
+            element(
+              "result-main-title"
+            ).textContent =
+              "Tu ubicación fue compartida";
+
+            element(
+              "result-main-description"
+            ).textContent =
+              `El teléfono entregó coordenadas ` +
+              `con una precisión reportada de ` +
+              `${roundedAccuracy} metros.`;
+
+            const mapUrl =
+              `https://www.openstreetmap.org/` +
+              `?mlat=${
+                encodeURIComponent(latitude)
+              }` +
+              `&mlon=${
+                encodeURIComponent(longitude)
+              }` +
+              `#map=18/${
+                encodeURIComponent(latitude)
+              }/${
+                encodeURIComponent(longitude)
+              }`;
+
+            element("map-link").href =
+              mapUrl;
+
+            button.textContent =
+              "Ubicación obtenida";
 
             showLocationStatus(
-              "Se obtuvieron las coordenadas, pero no fue posible " +
-              "consultar la dirección cartográfica.",
+              "Ubicación concedida. Consultando referencias " +
+              "cartográficas próximas…"
+            );
+
+            setTimeout(() => {
+              locationCard.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              });
+            }, 300);
+
+            try {
+              const mapResult =
+                await reverseGeocode(
+                  latitude,
+                  longitude
+                );
+
+              populateMapAddress(
+                mapResult
+              );
+
+              showLocationStatus(
+                "Ubicación y referencias cartográficas obtenidas."
+              );
+            } catch (error) {
+              console.error(
+                "Geocodificación:",
+                error
+              );
+
+              showMapFailure();
+
+              showLocationStatus(
+                "Se obtuvieron las coordenadas, pero no fue posible " +
+                "consultar la dirección cartográfica.",
+                true
+              );
+            }
+          },
+
+          (error) => {
+            const messages = {
+              1:
+                "El permiso de ubicación fue rechazado.",
+              2:
+                "El teléfono no pudo determinar la ubicación.",
+              3:
+                "La solicitud agotó el tiempo de espera."
+            };
+
+            showLocationStatus(
+              messages[error.code] ||
+              "No fue posible obtener la ubicación.",
               true
             );
+
+            button.disabled = false;
+
+            button.textContent =
+              "Intentar nuevamente";
+          },
+
+          {
+            enableHighAccuracy: true,
+            timeout: 25000,
+            maximumAge: 0
           }
-        },
-
-        (error) => {
-          const errorMessages = {
-            1: "El permiso de ubicación fue rechazado.",
-            2: "El teléfono no pudo determinar su ubicación.",
-            3: "La solicitud agotó el tiempo de espera."
-          };
-
-          showLocationStatus(
-            errorMessages[error.code] ||
-            "No fue posible obtener la ubicación.",
-            true
-          );
-
-          button.disabled = false;
-          button.textContent =
-            "Intentar nuevamente";
-        },
-
-        {
-          enableHighAccuracy: true,
-          timeout: 25000,
-          maximumAge: 0
-        }
-      );
+        );
     }
-
-    /* Eventos */
-
-    getElement("location-button")
-      .addEventListener(
-        "click",
-        requestPreciseLocation
-      );
-
-    window.addEventListener(
-      "online",
-      () => {
-        setValue(
-          "connection-type",
-          detectConnectionType()
-        );
-      }
-    );
-
-    window.addEventListener(
-      "offline",
-      () => {
-        setValue(
-          "connection-type",
-          "Sin conexión"
-        );
-      }
-    );
 
     /* Inicio */
 
-    populateDeviceInformation();
-    loadNetworkInformation();
+    element("location-button")
+      .addEventListener(
+        "click",
+        requestLocation
+      );
+
+    startMatrixAnimation();
+    populateDeviceData();
+    loadNetworkData();
+    startCountdown();
   </script>
 
 </body>
