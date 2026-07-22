@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1,
+    user-scalable=no, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#020604">
+
+  <title>Evaluación de exposición NFC</title>
+
+  <style>
+    :root {
+      --background: #020604;
+      --panel: #07100b;
+      --panel-2: #0b1710;
+      --border: #1a4228;
+      --green: #35ff79;
+      --green-soft: #80ffa5;
+      --yellow: #ffd84a;
+      --red: #ff4c4c;
+      --blue: #75cfff;
+      --text: #f2fff5;
+      --muted: #9bb0a0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, #0b2915 0%, #020604 42%);
+      color: var(--text);
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding:
+        max(22px, env(safe-area-inset-top))
+        16px
+        max(28px, env(safe-area-inset-bottom));
+    }
+
+    .container {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .header {
+      padding: 22px 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(4, 16, 9, 0.9);
+      box-shadow:
+        0 0 30px rgba(30, 255, 95, 0.08),
+        inset 0 0 30px rgba(30, 255, 95, 0.03);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border: 1px solid var(--green);
+      border-radius: 999px;
+      color: var(--green);
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      color: var(--green);
+      font-size: clamp(30px, 8vw, 52px);
+      line-height: 1;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #d5e8d9;
+      font-size: 17px;
+      line-height: 1.5;
+    }
+
+    .warning {
+      margin-top: 18px;
+      padding: 14px;
+      border-left: 4px solid var(--yellow);
+      background: rgba(255, 216, 74, 0.07);
+      color: #fff4b0;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .section {
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(7, 16, 11, 0.92);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 15px;
+      color: var(--green-soft);
+      font-size: 20px;
+    }
+
+    .section-title span {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px var(--green);
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .data-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 42%) 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid #17321f;
+      border-radius: 12px;
+      background: var(--panel-2);
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .value {
+      color: var(--blue);
+      font-family:
+        "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 14px;
+      font-weight: 700;
+      word-break: break-word;
+      text-align: right;
+    }
+
+    .value.loading {
+      color: var(--yellow);
+    }
+
+    .value.error {
+      color: var(--red);
+    }
+
+    .location-intro {
+      margin: 0 0 16px;
+      color: #d1dfd4;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .location-button {
+      width: 100%;
+      padding: 16px 18px;
+      border: 1px solid var(--green);
+      border-radius: 13px;
+      background:
+        linear-gradient(180deg, #144b25 0%, #0a2714 100%);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 850;
+      cursor: pointer;
+      box-shadow: 0 0 18px rgba(53, 255, 121, 0.14);
+    }
+
+    .location-button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .location-status {
+      display: none;
+      margin-top: 15px;
+      padding: 13px;
+      border-radius: 12px;
+      background: rgba(117, 207, 255, 0.08);
+      color: #cceeff;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .location-status.visible {
+      display: block;
+    }
+
+    #precise-location {
+      display: none;
+      margin-top: 16px;
+    }
+
+    #precise-location.visible {
+      display: block;
+    }
+
+    .risk-box {
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid #7d2d2d;
+      border-radius: 16px;
+      background: rgba(112, 0, 0, 0.18);
+    }
+
+    .risk-box h2 {
+      margin: 0 0 12px;
+      color: var(--red);
+      font-size: 22px;
+    }
+
+    .risk-box p {
+      margin: 10px 0;
+      color: #ffe0e0;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .not-available {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid #3b3b3b;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .not-available h2 {
+      margin: 0 0 12px;
+      color: var(--yellow);
+      font-size: 19px;
+    }
+
+    .not-available p {
+      margin: 8px 0;
+      color: #c6c6c6;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .footer {
+      margin-top: 20px;
+      color: #78907e;
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .pulse {
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from {
+        opacity: 0.55;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @media (min-width: 650px) {
+      body {
+        padding-left: 28px;
+        padding-right: 28px;
+      }
+
+      .data-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .data-row.wide {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="container">
+
+    <header class="header">
+      <div class="badge">NFC SECURITY DEMO</div>
+
+      <h1>Información expuesta</h1>
+
+      <p class="subtitle">
+        Estos datos comenzaron a estar disponibles cuando abriste el enlace
+        de una etiqueta NFC.
+      </p>
+
+      <div class="warning">
+        La etiqueta no controla el teléfono por sí sola. El riesgo consiste
+        en abrir un destino desconocido y después conceder permisos o
+        proporcionar información.
+      </div>
+    </header>
+
+    <section class="section">
+      <h2 class="section-title">
+        <span></span>
+        Información de red y ubicación aproximada
+      </h2>
+
+      <div class="data-grid">
+
+        <div class="data-row">
+          <div class="label">IP pública</div>
+          <div id="public-ip" class="value loading">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Proveedor</div>
+          <div id="provider" class="value loading">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Tipo de conexión</div>
+          <div id="connection-type" class="value">Analizando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">País</div>
+          <div id="country" class="value loading">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Estado o región</div>
+          <div id="region" class="value loading">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Ciudad aproximada</div>
+          <div id="city" class="value loading">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Código postal aproximado</div>
+          <div id="postal" class="value loading">Consultando…</div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Zona horaria por IP</div>
+          <div id="ip-timezone" class="value loading">Consultando…</div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">
+        <span></span>
+        Información observada en el dispositivo
+      </h2>
+
+      <div class="data-grid">
+
+        <div class="data-row">
+          <div class="label">Marca probable</div>
+          <div id="brand" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Tipo de dispositivo</div>
+          <div id="device" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Sistema operativo</div>
+          <div id="operating-system" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Navegador</div>
+          <div id="browser" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Idioma principal</div>
+          <div id="language" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Idiomas configurados</div>
+          <div id="languages" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Zona horaria</div>
+          <div id="timezone" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Procesadores disponibles</div>
+          <div id="processors" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Estado de Internet</div>
+          <div id="online-status" class="value"></div>
+        </div>
+
+        <div class="data-row">
+          <div class="label">Cookies habilitadas</div>
+          <div id="cookies" class="value"></div>
+        </div>
+
+        <div class="data-row wide">
+          <div class="label">Identificador del navegador</div>
+          <div id="user-agent" class="value"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">
+        <span></span>
+        Ubicación precisa con autorización
+      </h2>
+
+      <p class="location-intro">
+        Una página también puede solicitar acceso a la ubicación precisa.
+        El teléfono debe mostrar una autorización oficial antes de
+        compartirla.
+      </p>
+
+      <button id="location-button" class="location-button">
+        Continuar y comprobar ubicación
+      </button>
+
+      <div id="location-status" class="location-status"></div>
+
+      <div id="precise-location">
+
+        <div class="data-grid">
+
+          <div class="data-row">
+            <div class="label">Latitud</div>
+            <div id="latitude" class="value"></div>
+          </div>
+
+          <div class="data-row">
+            <div class="label">Longitud</div>
+            <div id="longitude" class="value"></div>
+          </div>
+
+          <div class="data-row">
+            <div class="label">Precisión estimada</div>
+            <div id="accuracy" class="value"></div>
+          </div>
+
+          <div class="data-row">
+            <div class="label">Colonia o localidad</div>
+            <div id="neighbourhood" class="value"></div>
+          </div>
+
+          <div class="data-row">
+            <div class="label">Alcaldía o municipio</div>
+            <div id="municipality" class="value"></div>
+          </div>
+
+          <div class="data-row">
+            <div class="label">Ciudad</div>
+            <div id="precise-city" class="value"></div>
+          </div>
+
+          <div class="data-row">
+            <div class="label">Estado</div>
+            <div id="precise-state" class="value"></div>
+          </div>
+
+          <div class="data-row">
+            <div class="label">Código postal</div>
+            <div id="precise-postal" class="value"></div>
+          </div>
+
+          <div class="data-row wide">
+            <div class="label">Dirección aproximada</div>
+            <div id="display-name" class="value"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="risk-box">
+      <h2>¿Qué demuestra este ejercicio?</h2>
+
+      <p>
+        Sin instalar una aplicación, la página pudo conocer información
+        técnica y estimar tu ubicación por medio de la conexión.
+      </p>
+
+      <p>
+        Al conceder ubicación, también pudo convertir tus coordenadas en
+        colonia, municipio, ciudad y dirección aproximada.
+      </p>
+
+      <p>
+        En un ataque real, una página podría almacenar esta información,
+        combinarla con credenciales o utilizarla para adaptar un fraude.
+      </p>
+    </section>
+
+    <section class="not-available">
+      <h2>Datos que esta página no puede obtener</h2>
+
+      <p>
+        No puede consultar tu dirección MAC, nombre personal del teléfono,
+        contraseña de Wi-Fi, nombre de la red Wi-Fi ni acceder a tus
+        fotografías sin selección o autorización adicional.
+      </p>
+
+      <p>
+        Tampoco puede identificar con certeza el modelo exacto del teléfono.
+        La marca, sistema y tipo de dispositivo son estimaciones basadas en
+        la información entregada por el navegador.
+      </p>
+    </section>
+
+    <footer class="footer">
+      Demostración educativa. Esta página no contiene formularios de acceso,
+      cookies de seguimiento ni almacenamiento propio. Las consultas de IP y
+      geocodificación utilizan servicios externos.
+    </footer>
+
+  </main>
+
+  <script>
+    "use strict";
+
+    const $ = (id) => document.getElementById(id);
+
+    function setValue(id, value, state = "") {
+      const element = $(id);
+
+      element.textContent =
+        value === undefined ||
+        value === null ||
+        value === ""
+          ? "No disponible"
+          : String(value);
+
+      element.classList.remove("loading", "error");
+
+      if (state) {
+        element.classList.add(state);
+      }
+    }
+
+    function detectDevice() {
+      const ua = navigator.userAgent || "";
+      const platform = navigator.platform || "";
+
+      let brand = "No identificada";
+      let device = "Dispositivo no identificado";
+      let os = "No identificado";
+      let browser = "Navegador no identificado";
+
+      if (/iPhone/i.test(ua)) {
+        brand = "Apple";
+        device = "iPhone";
+        os = detectIOSVersion(ua);
+      } else if (/iPad/i.test(ua)) {
+        brand = "Apple";
+        device = "iPad";
+        os = detectIOSVersion(ua).replace("iOS", "iPadOS");
+      } else if (
+        /Macintosh/i.test(ua) &&
+        navigator.maxTouchPoints > 1
+      ) {
+        brand = "Apple";
+        device = "iPad";
+        os = "iPadOS";
+      } else if (/Android/i.test(ua)) {
+        brand = detectAndroidBrand(ua);
+        device = "Teléfono o tableta Android";
+        os = detectAndroidVersion(ua);
+      } else if (/Windows/i.test(ua)) {
+        brand = "No identificada";
+        device = "Computadora";
+        os = "Windows";
+      } else if (/Macintosh|MacIntel/i.test(ua + platform)) {
+        brand = "Apple";
+        device = "Mac";
+        os = "macOS";
+      } else if (/Linux/i.test(ua)) {
+        device = "Computadora";
+        os = "Linux";
+      }
+
+      if (/CriOS/i.test(ua)) {
+        browser = "Google Chrome para iOS";
+      } else if (/FxiOS/i.test(ua)) {
+        browser = "Mozilla Firefox para iOS";
+      } else if (/EdgiOS/i.test(ua)) {
+        browser = "Microsoft Edge para iOS";
+      } else if (/OPiOS/i.test(ua)) {
+        browser = "Opera para iOS";
+      } else if (
+        /Safari/i.test(ua) &&
+        !/Chrome|CriOS|Edg|OPR|FxiOS/i.test(ua)
+      ) {
+        browser = "Safari";
+      } else if (/Edg/i.test(ua)) {
+        browser = "Microsoft Edge";
+      } else if (/OPR|Opera/i.test(ua)) {
+        browser = "Opera";
+      } else if (/Firefox/i.test(ua)) {
+        browser = "Mozilla Firefox";
+      } else if (/Chrome/i.test(ua)) {
+        browser = "Google Chrome";
+      }
+
+      return {
+        brand,
+        device,
+        os,
+        browser
+      };
+    }
+
+    function detectIOSVersion(ua) {
+      const match = ua.match(/OS (\d+)[._](\d+)(?:[._](\d+))?/i);
+
+      if (!match) {
+        return "iOS";
+      }
+
+      const version = [
+        match[1],
+        match[2],
+        match[3]
+      ].filter(Boolean).join(".");
+
+      return `iOS ${version}`;
+    }
+
+    function detectAndroidVersion(ua) {
+      const match = ua.match(/Android\s([0-9.]+)/i);
+
+      return match
+        ? `Android ${match[1]}`
+        : "Android";
+    }
+
+    function detectAndroidBrand(ua) {
+      const brands = [
+        ["Samsung", /Samsung|SM-/i],
+        ["Google", /Pixel/i],
+        ["Xiaomi", /Xiaomi|Redmi|POCO/i],
+        ["Motorola", /Motorola|Moto/i],
+        ["Huawei", /Huawei|HUAWEI/i],
+        ["Honor", /HONOR/i],
+        ["OnePlus", /OnePlus/i],
+        ["OPPO", /OPPO/i],
+        ["vivo", /vivo/i],
+        ["realme", /realme/i],
+        ["Sony", /Sony/i],
+        ["Nokia", /Nokia/i]
+      ];
+
+      for (const [name, pattern] of brands) {
+        if (pattern.test(ua)) {
+          return name;
+        }
+      }
+
+      return "Android / no identificada";
+    }
+
+    function detectConnectionType() {
+      const connection =
+        navigator.connection ||
+        navigator.mozConnection ||
+        navigator.webkitConnection;
+
+      if (!connection) {
+        return navigator.onLine
+          ? "Conectado; tecnología no expuesta"
+          : "Sin conexión";
+      }
+
+      const parts = [];
+
+      if (connection.type) {
+        parts.push(connection.type);
+      }
+
+      if (connection.effectiveType) {
+        parts.push(connection.effectiveType.toUpperCase());
+      }
+
+      if (connection.downlink) {
+        parts.push(`${connection.downlink} Mb/s estimados`);
+      }
+
+      return parts.length
+        ? parts.join(" · ")
+        : "Conectado; tipo no identificado";
+    }
+
+    function populateBrowserData() {
+      const detected = detectDevice();
+
+      setValue("brand", detected.brand);
+      setValue("device", detected.device);
+      setValue("operating-system", detected.os);
+      setValue("browser", detected.browser);
+
+      setValue(
+        "language",
+        navigator.language || "No disponible"
+      );
+
+      setValue(
+        "languages",
+        navigator.languages?.join(", ") ||
+          navigator.language ||
+          "No disponible"
+      );
+
+      setValue(
+        "timezone",
+        Intl.DateTimeFormat()
+          .resolvedOptions()
+          .timeZone || "No disponible"
+      );
+
+      setValue(
+        "processors",
+        navigator.hardwareConcurrency
+          ? `${navigator.hardwareConcurrency} procesadores lógicos`
+          : "No expuesto por el navegador"
+      );
+
+      setValue(
+        "online-status",
+        navigator.onLine ? "En línea" : "Sin conexión"
+      );
+
+      setValue(
+        "cookies",
+        navigator.cookieEnabled
+          ? "Sí"
+          : "No"
+      );
+
+      setValue(
+        "user-agent",
+        navigator.userAgent || "No disponible"
+      );
+
+      setValue(
+        "connection-type",
+        detectConnectionType()
+      );
+    }
+
+    async function loadPublicNetworkData() {
+      try {
+        const response = await fetch(
+          "https://ipwho.is/"
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Respuesta HTTP ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        if (data.success === false) {
+          throw new Error(
+            data.message || "Consulta rechazada"
+          );
+        }
+
+        setValue("public-ip", data.ip);
+        setValue(
+          "provider",
+          data.connection?.isp ||
+          data.connection?.org ||
+          "No identificado"
+        );
+
+        setValue("country", data.country);
+        setValue("region", data.region);
+        setValue("city", data.city);
+        setValue("postal", data.postal);
+        setValue(
+          "ip-timezone",
+          data.timezone?.id ||
+          data.timezone?.abbr ||
+          "No disponible"
+        );
+      } catch (error) {
+        console.error("Error consultando IP:", error);
+
+        const affected = [
+          "public-ip",
+          "provider",
+          "country",
+          "region",
+          "city",
+          "postal",
+          "ip-timezone"
+        ];
+
+        affected.forEach((id) => {
+          setValue(
+            id,
+            "Consulta no disponible",
+            "error"
+          );
+        });
+      }
+    }
+
+    function showLocationStatus(message, isError = false) {
+      const status = $("location-status");
+
+      status.textContent = message;
+      status.classList.add("visible");
+      status.style.color = isError
+        ? "#ffd0d0"
+        : "#cceeff";
+
+      status.style.background = isError
+        ? "rgba(112, 0, 0, 0.20)"
+        : "rgba(117, 207, 255, 0.08)";
+    }
+
+    async function reverseGeocode(latitude, longitude) {
+      const url = new URL(
+        "https://nominatim.openstreetmap.org/reverse"
+      );
+
+      url.searchParams.set("format", "jsonv2");
+      url.searchParams.set("lat", latitude);
+      url.searchParams.set("lon", longitude);
+      url.searchParams.set("zoom", "18");
+      url.searchParams.set("addressdetails", "1");
+      url.searchParams.set("accept-language", "es");
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Geocodificación HTTP ${response.status}`
+        );
+      }
+
+      return response.json();
+    }
+
+    function chooseAddressValue(address, fields) {
+      for (const field of fields) {
+        if (address?.[field]) {
+          return address[field];
+        }
+      }
+
+      return "No disponible";
+    }
+
+    async function handlePreciseLocation() {
+      const button = $("location-button");
+
+      if (!navigator.geolocation) {
+        showLocationStatus(
+          "Este navegador no ofrece acceso a geolocalización.",
+          true
+        );
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Esperando autorización…";
+
+      showLocationStatus(
+        "El teléfono debe mostrar una solicitud oficial de ubicación. " +
+        "Puedes permitirla o rechazarla."
+      );
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const {
+            latitude,
+            longitude,
+            accuracy
+          } = position.coords;
+
+          setValue(
+            "latitude",
+            latitude.toFixed(6)
+          );
+
+          setValue(
+            "longitude",
+            longitude.toFixed(6)
+          );
+
+          setValue(
+            "accuracy",
+            `${Math.round(accuracy)} metros`
+          );
+
+          $("precise-location")
+            .classList.add("visible");
+
+          showLocationStatus(
+            "Ubicación concedida. Convirtiendo las coordenadas " +
+            "en una dirección aproximada…"
+          );
+
+          try {
+            const result = await reverseGeocode(
+              latitude,
+              longitude
+            );
+
+            const address = result.address || {};
+
+            setValue(
+              "neighbourhood",
+              chooseAddressValue(address, [
+                "neighbourhood",
+                "suburb",
+                "quarter",
+                "residential",
+                "hamlet",
+                "village"
+              ])
+            );
+
+            setValue(
+              "municipality",
+              chooseAddressValue(address, [
+                "borough",
+                "municipality",
+                "city_district",
+                "county",
+                "town"
+              ])
+            );
+
+            setValue(
+              "precise-city",
+              chooseAddressValue(address, [
+                "city",
+                "town",
+                "village",
+                "municipality"
+              ])
+            );
+
+            setValue(
+              "precise-state",
+              chooseAddressValue(address, [
+                "state",
+                "region"
+              ])
+            );
+
+            setValue(
+              "precise-postal",
+              address.postcode
+            );
+
+            setValue(
+              "display-name",
+              result.display_name
+            );
+
+            showLocationStatus(
+              "Ubicación y dirección aproximada obtenidas. " +
+              "La exactitud depende del GPS y de los datos cartográficos."
+            );
+          } catch (error) {
+            console.error(
+              "Error en geocodificación:",
+              error
+            );
+
+            [
+              "neighbourhood",
+              "municipality",
+              "precise-city",
+              "precise-state",
+              "precise-postal",
+              "display-name"
+            ].forEach((id) => {
+              setValue(
+                id,
+                "Dirección no disponible",
+                "error"
+              );
+            });
+
+            showLocationStatus(
+              "Se obtuvieron las coordenadas, pero no fue posible " +
+              "convertirlas en una dirección.",
+              true
+            );
+          }
+
+          button.textContent =
+            "Ubicación obtenida";
+        },
+
+        (error) => {
+          const messages = {
+            1: "El permiso de ubicación fue rechazado.",
+            2: "El teléfono no pudo determinar la ubicación.",
+            3: "La solicitud de ubicación agotó el tiempo de espera."
+          };
+
+          showLocationStatus(
+            messages[error.code] ||
+            "No fue posible obtener la ubicación.",
+            true
+          );
+
+          button.disabled = false;
+          button.textContent =
+            "Intentar nuevamente";
+        },
+
+        {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    $("location-button").addEventListener(
+      "click",
+      handlePreciseLocation
+    );
+
+    window.addEventListener("online", () => {
+      setValue("online-status", "En línea");
+      setValue(
+        "connection-type",
+        detectConnectionType()
+      );
+    });
+
+    window.addEventListener("offline", () => {
+      setValue("online-status", "Sin conexión");
+      setValue(
+        "connection-type",
+        "Sin conexión"
+      );
+    });
+
+    populateBrowserData();
+    loadPublicNetworkData();
+  </script>
+
+</body>
+</html>
